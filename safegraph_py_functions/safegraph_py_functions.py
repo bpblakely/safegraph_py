@@ -192,7 +192,11 @@ def explode_json_array(df, array_column = 'visits_by_day', value_col_name=None, 
     df = df.copy()
     df.reset_index(drop=True, inplace=True) # THIS IS IMPORTANT; explode will not work correctly if index is not unique
     df[array_column + '_json'] = load_json_nan(df,array_column)
-    day_visits_exp = df[[place_key, file_key, array_column+'_json']].explode(array_column+'_json')
+    df[array_column + '_json'] = load_json_nan(df,array_column)
+    try:
+        day_visits_exp = df[[place_key, file_key, array_column+'_json']].explode(array_column+'_json')
+    except KeyError: # User incorrectly called explode_json_array, so return the value they are expecting instead of throwing an error
+        return unpack_json_and_merge(df,array_column, value_col_name=value_col_name,key_col_name=array_sequence).drop(array_column + '_json',axis=1)
     day_visits_exp['dummy_key'] = day_visits_exp.index
     day_visits_exp[array_sequence] = day_visits_exp.groupby([place_key, file_key])['dummy_key'].rank(method='first', ascending=True).astype('int64')
     if(zero_index):
